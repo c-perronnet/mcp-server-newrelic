@@ -1,10 +1,13 @@
 import json
+import logging
 from typing import List, Optional, Dict, Any
 from fastmcp import FastMCP
 
 # Use absolute imports
 import client
 import config
+
+logger = logging.getLogger(__name__)
 
 def register(mcp: FastMCP):
     """Registers entity-related tools, resources, and prompts."""
@@ -45,7 +48,7 @@ def register(mcp: FastMCP):
              # If no target is specified, but a global one exists, maybe default to it?
              # Or keep it broad? Let's keep it broad unless specified.
              # conditions.append(f"accountId = {config.ACCOUNT_ID}")
-             print("Searching across all accessible accounts. Specify target_account_id to limit.")
+             logger.info("Searching across all accessible accounts. Specify target_account_id to limit.")
 
 
         if name:

@@ -1,7 +1,10 @@
 import requests
 import json
+import logging
 from typing import Optional, Dict, Any
 import config # Use direct import as it's top-level
+
+logger = logging.getLogger(__name__)
 
 def execute_nerdgraph_query(query: str, variables: Optional[Dict[str, Any]] = None) -> Dict[str, Any]:
     """
@@ -26,7 +29,8 @@ def execute_nerdgraph_query(query: str, variables: Optional[Dict[str, Any]] = No
     if variables:
         payload["variables"] = variables
 
-    print(f"Executing NerdGraph Query:\nQuery: {query}\nVariables: {variables}")
+    # Query and variables can contain sensitive data; log only at DEBUG.
+    logger.debug("Executing NerdGraph query: %s | variables: %s", query, variables)
 
     try:
         # Use constants from config module
@@ -35,14 +39,16 @@ def execute_nerdgraph_query(query: str, variables: Optional[Dict[str, Any]] = No
         return response.json()
     except requests.exceptions.Timeout:
         error_message = "NerdGraph API request timed out."
-        print(error_message)
+        logger.error(error_message)
         return {"errors": [{"message": error_message}]}
     except requests.exceptions.RequestException as e:
         error_message = f"NerdGraph API request failed: {e}"
         # Try to get more detail from response if available
         if e.response is not None:
-            error_message += f" Status Code: {e.response.status_code}. Response: {e.response.text[:500]}" # Limit response length
-        print(error_message)
+            error_message += f" Status Code: {e.response.status_code}."
+            # Response bodies may contain sensitive data; log only at DEBUG.
+            logger.debug("NerdGraph error response body: %s", e.response.text[:500])
+        logger.error(error_message)
         return {"errors": [{"message": error_message}]}
     except json.JSONDecodeError as e_json:
         error_message = f"Failed to decode NerdGraph API JSON response: {e_json}"
@@ -50,24 +56,25 @@ def execute_nerdgraph_query(query: str, variables: Optional[Dict[str, Any]] = No
         raw_response_text = ""
         if 'response' in locals() and hasattr(response, 'text'):
             raw_response_text = response.text[:500] # Limit response length
-        print(error_message)
+        logger.error(error_message)
+        logger.debug("NerdGraph raw response body: %s", raw_response_text)
         return {"errors": [{"message": error_message, "raw_response": raw_response_text}]}
 
 def format_json_response(result: Dict[str, Any]) -> str:
     """Formats the result dictionary as a JSON string for MCP return."""
     # Handle potential GraphQL errors reported within the JSON payload
     if "errors" in result and result["errors"]: # Check if errors list is not empty
-        print(f"NerdGraph query returned errors: {json.dumps(result['errors'], indent=2)}")
+        logger.warning("NerdGraph query returned errors: %s", json.dumps(result["errors"]))
         # Pass errors through in the JSON string
     elif "data" not in result and "errors" not in result:
          # If no 'data' and no 'errors', it might be an unexpected response format
-         print(f"Warning: NerdGraph response missing 'data' and 'errors' fields: {json.dumps(result, indent=2)}")
+         logger.warning("NerdGraph response missing 'data' and 'errors' fields.")
 
     try:
         # Return the full result (including data and/or errors)
         return json.dumps(result, indent=2)
     except TypeError as e:
         error_message = f"Failed to serialize NerdGraph response to JSON: {e}"
-        print(error_message)
+        logger.error(error_message)
         # Return an error structure if serialization fails
         return json.dumps({"errors": [{"message": error_message, "original_result_type": str(type(result))}]}) 
