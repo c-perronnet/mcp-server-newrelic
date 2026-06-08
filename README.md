@@ -6,7 +6,7 @@
 
 This repository provides a [Model Context Protocol (MCP)](https://modelcontextprotocol.io/) server for interacting with the [New Relic NerdGraph API](https://docs.newrelic.com/docs/apis/nerdgraph/get-started/introduction-new-relic-nerdgraph/). It allows MCP clients (like Claude Desktop) to use natural language or specific commands to query and interact with your New Relic account data and features.
 
-Built using the [fastmcp](https://github.com/jlowin/fastmcp) framework.
+Built using the [FastMCP](https://gofastmcp.com) framework (v3).
 
 ## Features
 
@@ -54,41 +54,78 @@ export NEW_RELIC_ACCOUNT_ID="YOUR_ACCOUNT_ID"
 
 **Security Note:** Do not hardcode your API key in the source code. Using environment variables is the recommended approach. You can also use tools like `direnv` or place these `export` commands in your shell profile (`.zshrc`, `.bashrc`, etc.) for persistence, but be mindful of the security implications.
 
+### Optional environment variables
+
+| Variable | Default | Purpose |
+| --- | --- | --- |
+| `NERDGRAPH_URL` | `https://api.newrelic.com/graphql` | Override the NerdGraph endpoint (e.g. the EU data center: `https://api.eu.newrelic.com/graphql`). Must be HTTPS and a `*.newrelic.com` host — your API key is sent here. |
+| `NERDGRAPH_ALLOW_INSECURE_ENDPOINT` | `false` | Set to `true` to bypass the endpoint allowlist for a trusted self-hosted proxy. **Only do this if you accept that the API key will be sent to that host.** |
+| `NEWRELIC_MCP_LOG_LEVEL` | `INFO` | Logging verbosity (`DEBUG` logs query/response bodies — may contain sensitive data). |
+
 ## Running the Server
 
-Once configured, start the server using the `fastmcp` command-line tool:
+This server uses the **STDIO** transport by default — the MCP client launches it as a
+subprocess and communicates over stdin/stdout. You normally don't run it by hand; the
+client (e.g. Claude Code, Claude Desktop) starts it for you using the configuration below.
+
+To run it manually for a quick smoke test:
 
 ```bash
-fastmcp run server.py:mcp
+fastmcp run server.py:mcp   # or: python server.py
 ```
 
-*   `server.py`: The main entry point script.
-*   `mcp`: The name of the `FastMCP` instance created within `server.py`.
+> All diagnostic output goes to **stderr** so the STDIO JSON-RPC stream on stdout stays
+> clean. Set `NEWRELIC_MCP_LOG_LEVEL=DEBUG` for verbose logging (note: DEBUG logs query
+> and response bodies, which may contain sensitive data).
 
-The server will start, print registration messages, and listen for incoming MCP connections (typically on port 8000 by default, managed by `fastmcp`). You should see output similar to:
+## Usage with Claude Code
 
-```
-Using New Relic Account ID: YOUR_ACCOUNT_ID
-Registering common features...
-Registering entity features...
-Registering APM features...
-Registering Synthetics features...
-Registering Alerts features...
-Feature registration complete.
-INFO:     Started server process [XXXXX]
-INFO:     Waiting for application startup.
-INFO:     Application startup complete.
-INFO:     Uvicorn running on http://127.0.0.1:8000 (Press CTRL+C to quit)
+The easiest way is the FastMCP CLI, which registers the server with Claude Code and wires
+up dependencies automatically (it reads `fastmcp.json`):
+
+```bash
+fastmcp install claude-code server.py \
+  --env NEW_RELIC_API_KEY=YOUR_API_KEY \
+  --env NEW_RELIC_ACCOUNT_ID=YOUR_ACCOUNT_ID
 ```
 
-Leave this terminal window running.
+Or configure it manually with `claude mcp add` (uses `uv` to provide an isolated
+environment — recommended):
 
-## Usage with MCP Clients
+```bash
+claude mcp add newrelic \
+  -e NEW_RELIC_API_KEY=YOUR_API_KEY \
+  -e NEW_RELIC_ACCOUNT_ID=YOUR_ACCOUNT_ID \
+  -- uv run --with fastmcp --with requests fastmcp run /absolute/path/to/server.py:mcp
+```
 
-1.  **Start the MCP Server** (as described above).
-2.  **Restart your MCP Client** (e.g., Claude Desktop).
-3.  The client should automatically detect the running server and connect to it. You might see an indicator (like a 🔨 icon in Claude Desktop) showing that external tools are available.
-4.  You can now interact with your New Relic account using natural language or by directly invoking the tools listed below.
+Verify the connection with `/mcp` inside Claude Code, then ask things like
+*"Show me my APM applications"* or *"List open critical incidents in account 1234567"*.
+
+## Usage with Other MCP Clients (e.g. Claude Desktop)
+
+Add an entry to your client's MCP config (for Claude Desktop:
+`claude_desktop_config.json`):
+
+```json
+{
+  "mcpServers": {
+    "newrelic": {
+      "command": "uv",
+      "args": ["run", "--with", "fastmcp", "--with", "requests",
+               "fastmcp", "run", "/absolute/path/to/server.py:mcp"],
+      "env": {
+        "NEW_RELIC_API_KEY": "YOUR_API_KEY",
+        "NEW_RELIC_ACCOUNT_ID": "YOUR_ACCOUNT_ID"
+      }
+    }
+  }
+}
+```
+
+After saving, restart the client. You should see a 🔨 / tools indicator. You can now
+interact with your New Relic account using natural language or by directly invoking the
+tools listed below.
 
     *   **Natural Language Example:** "Show me my APM applications" or "List open critical incidents in account 1234567"
     *   **Direct Invocation (if supported):** `list_apm_applications()` or `list_open_incidents(priority='CRITICAL', target_account_id=1234567)`

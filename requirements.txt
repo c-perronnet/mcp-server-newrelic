@@ -1,9 +1,8 @@
 # Pinned to reduce supply-chain risk (avoid auto-pulling a future malicious release).
 #
-# NOTE: this code targets the fastmcp 2.x API (FastMCP(name, dependencies=[...]),
-# @mcp.tool/@mcp.resource/@mcp.prompt, `fastmcp run server.py:mcp`). fastmcp 3.x
-# introduces breaking changes, so we bound it to <3. Once you verify a specific
-# version in your environment, prefer an exact pin (==) plus hashes via pip-compile
-# / `pip install --require-hashes` for the strongest guarantee.
-fastmcp>=2.11,<3
+# fastmcp is bounded to the current major (3.x) to pick up security fixes while
+# avoiding a future breaking major. Once you verify a specific version in your
+# environment, prefer an exact pin (==) plus hashes via pip-compile /
+# `pip install --require-hashes` for the strongest guarantee.
+fastmcp>=3.4,<4
 requests==2.32.5
