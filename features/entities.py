@@ -90,7 +90,7 @@ def register(mcp: FastMCP):
                   entityType
                   domain
                   accountId
-                  tags { key value }
+                  tags { key values }
                 }
                 nextCursor
               }
@@ -127,7 +127,7 @@ def register(mcp: FastMCP):
               accountId
               domain
               entityType
-              tags { key value }
+              tags { key values }
               # Common fields first
               reporting
               permalink

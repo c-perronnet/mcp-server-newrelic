@@ -41,7 +41,7 @@ def register(mcp: FastMCP):
                     locationsPublic # Array of strings
                     locationsPrivate { guid name } # Array of objects
                   }
-                  tags { key value }
+                  tags { key values }
                 }
                 nextCursor
               }
@@ -120,7 +120,7 @@ def register(mcp: FastMCP):
               status
               uri # The URL being monitored
               type
-              tags { key value }
+              tags { key values }
             }
             errors {
               description

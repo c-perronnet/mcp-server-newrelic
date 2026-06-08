@@ -34,10 +34,12 @@ def register(mcp: FastMCP):
                 entities {
                   guid
                   name
-                  language
                   reporting
                   alertSeverity
-                  tags { key value }
+                  tags { key values }
+                  ... on ApmApplicationEntityOutline {
+                    language
+                  }
                 }
                 nextCursor # TODO: Implement pagination for tools/resources if needed
               }
