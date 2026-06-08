@@ -50,6 +50,8 @@ The server requires your New Relic API Key and Account ID to function. Configure
 # Replace YOUR_API_KEY and YOUR_ACCOUNT_ID with your actual credentials
 export NEW_RELIC_API_KEY="YOUR_API_KEY"
 export NEW_RELIC_ACCOUNT_ID="YOUR_ACCOUNT_ID"
+# EU-region accounts: select the EU data center
+export NEW_RELIC_REGION="EU"
 ```
 
 **Security Note:** Do not hardcode your API key in the source code. Using environment variables is the recommended approach. You can also use tools like `direnv` or place these `export` commands in your shell profile (`.zshrc`, `.bashrc`, etc.) for persistence, but be mindful of the security implications.
@@ -58,7 +60,8 @@ export NEW_RELIC_ACCOUNT_ID="YOUR_ACCOUNT_ID"
 
 | Variable | Default | Purpose |
 | --- | --- | --- |
-| `NERDGRAPH_URL` | `https://api.newrelic.com/graphql` | Override the NerdGraph endpoint (e.g. the EU data center: `https://api.eu.newrelic.com/graphql`). Must be HTTPS and a `*.newrelic.com` host — your API key is sent here. |
+| `NEW_RELIC_REGION` | `US` | Selects the NerdGraph endpoint by region: `US` → `api.newrelic.com`, `EU` → `api.eu.newrelic.com`. **EU-region accounts must set `NEW_RELIC_REGION=EU`.** |
+| `NERDGRAPH_URL` | (from region) | Override the NerdGraph endpoint with a full URL. Takes precedence over `NEW_RELIC_REGION`. Must be HTTPS and a `*.newrelic.com` host — your API key is sent here. |
 | `NERDGRAPH_ALLOW_INSECURE_ENDPOINT` | `false` | Set to `true` to bypass the endpoint allowlist for a trusted self-hosted proxy. **Only do this if you accept that the API key will be sent to that host.** |
 | `NEWRELIC_MCP_LOG_LEVEL` | `INFO` | Logging verbosity (`DEBUG` logs query/response bodies — may contain sensitive data). |
 

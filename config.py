@@ -47,7 +47,16 @@ else:
 #
 # Set NERDGRAPH_ALLOW_INSECURE_ENDPOINT=true ONLY for trusted self-hosted/proxy
 # setups where you accept the risk of sending the API key elsewhere.
-DEFAULT_NERDGRAPH_URL = "https://api.newrelic.com/graphql"
+#
+# Region selection: NEW_RELIC_REGION=EU (or US) picks the right NerdGraph
+# endpoint without having to spell out the full URL. An explicit NERDGRAPH_URL
+# always takes precedence. See:
+# https://docs.newrelic.com/docs/apis/nerdgraph/get-started/introduction-new-relic-nerdgraph/#endpoints
+REGION_NERDGRAPH_URLS = {
+    "US": "https://api.newrelic.com/graphql",
+    "EU": "https://api.eu.newrelic.com/graphql",
+}
+DEFAULT_NERDGRAPH_URL = REGION_NERDGRAPH_URLS["US"]
 ALLOWED_NERDGRAPH_HOST_SUFFIXES = (".newrelic.com",)
 
 _ALLOW_INSECURE_ENDPOINT = os.getenv(
@@ -88,8 +97,24 @@ def _validate_nerdgraph_url(url: str) -> str:
     return url
 
 
+def _resolve_default_url() -> str:
+    """Pick the default endpoint from NEW_RELIC_REGION (defaults to US)."""
+    region = os.getenv("NEW_RELIC_REGION", "US").strip().upper()
+    if region not in REGION_NERDGRAPH_URLS:
+        logger.warning(
+            "Unknown NEW_RELIC_REGION '%s'. Valid values: %s. Falling back to US.",
+            region,
+            ", ".join(REGION_NERDGRAPH_URLS),
+        )
+        return DEFAULT_NERDGRAPH_URL
+    url = REGION_NERDGRAPH_URLS[region]
+    logger.info("Using New Relic %s region endpoint: %s", region, url)
+    return url
+
+
 _configured_url = os.getenv("NERDGRAPH_URL")
 if _configured_url:
+    # Explicit URL wins over region selection.
     NERDGRAPH_URL = _validate_nerdgraph_url(_configured_url.strip())
 else:
-    NERDGRAPH_URL = DEFAULT_NERDGRAPH_URL
+    NERDGRAPH_URL = _resolve_default_url()
